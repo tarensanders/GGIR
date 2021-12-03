@@ -26,7 +26,11 @@ g.part5(datadir=c(), metadatadir=c(), f0=c(), f1=c(), strategy=1,
   frag.metrics=c(), iglevels=c(), maxNcores=c(),
   LUXthresholds = c(0, 500, 1000, 5000, 10000, 20000),
   LUX_cal_constant = c(), LUX_cal_exponent = c(),
-  LUX_day_segments = c(), do.sibreport=FALSE, sleeplogidnum=FALSE)
+  LUX_day_segments = c(), do.sibreport=FALSE, sleeplogidnum=FALSE,
+   do.LIDS = FALSE, LIDS2csv = FALSE, 
+        LIDS_cosfit_periods = seq(30,180,by=5),
+        fit.criterion.cosfit = 2,  nonstationary = FALSE,
+        WakeBoutMin = 30, SleepBoutMin = 180)
 }
 \arguments{
   \item{datadir}{
@@ -221,6 +225,28 @@ g.part5(datadir=c(), metadatadir=c(), f0=c(), f1=c(), strategy=1,
   }
   \item{sleeplogidnum}{
     See \link{g.part4}
+  }
+  \item{do.LIDS}{
+   boolean, whether to do LIDS analysis (default: FALSE).
+  }
+  \item{LIDS2csv}{
+   Whether to export LIDS analysis time series to csv file (default: FALSE)
+  }
+  \item{LIDS_cosfit_periods}{
+   vector with period lengths (minutes) to consider for the cosine fitting
+  }
+  \item{fit.criterion.cosfit}{
+   Criterion to select the best cosine fit in the LIDS analysis: 1 = highest correlation;
+   2 = highest correlation time range of observation (proxy for amplitude), also referred to as MRI.
+  }
+  \item{nonstationary}{
+   Boolean to indicate whether nonstationary analysis should be performed
+  }
+   \item{WakeBoutMin}{
+   Mininum duration of a Wakefullness Bout (minutes)
+  }
+  \item{SleepBoutMin}{
+   Mininum duration of a Sleep Bout (minutes)
   }
 }
 \value{

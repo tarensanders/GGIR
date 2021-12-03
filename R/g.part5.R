@@ -21,7 +21,10 @@ g.part5 = function(datadir=c(),metadatadir=c(),f0=c(),f1=c(),strategy=1,maxdur=0
                    LUX_cal_exponent = c(),
                    LUX_day_segments = c(),
                    do.sibreport = FALSE,
-                   sleeplogidnum=FALSE) {
+                   sleeplogidnum=FALSE,
+                   do.LIDS = FALSE, LIDS2csv = FALSE, LIDS_cosfit_periods = seq(30,180,by=5),
+                   fit.criterion.cosfit = 2,  nonstationary = FALSE,
+                   WakeBoutMin = 30, SleepBoutMin = 180) {
   options(encoding = "UTF-8")
   Sys.setlocale("LC_TIME", "C") # set language to Englishs
   # description: function called by g.shell.GGIR
@@ -68,6 +71,18 @@ g.part5 = function(datadir=c(),metadatadir=c(),f0=c(),f1=c(),strategy=1,maxdur=0
   fnames.ms5 = sort(dir(paste(metadatadir,"/meta/ms5.out",sep="")))
   # path results folder
   results = paste(metadatadir,"/results",sep="")
+  
+  # create folder for LIDS output if it does not exist yet
+  LIDSfolder = "/meta/LIDS"
+  if (do.LIDS == TRUE) {
+    if (LIDS2csv == TRUE) {
+      if (file.exists(paste(metadatadir,LIDSfolder,sep=""))) {
+      } else {
+        dir.create(file.path(metadatadir,LIDSfolder))
+      }
+    }
+  }
+  
   # path to sleeplog milestonedata, if it exists:
   sleeplogRDA = paste(metadatadir,"/meta/sleeplog.RData",sep="")
   if (file.exists(sleeplogRDA) == TRUE){
@@ -154,11 +169,11 @@ g.part5 = function(datadir=c(),metadatadir=c(),f0=c(),f1=c(),strategy=1,maxdur=0
   fe_dopar = foreach::`%dopar%`
   fe_do = foreach::`%do%`
   i = 0 # declare i because foreach uses it, without declaring it
-  `%myinfix%` = ifelse(do.parallel, fe_dopar, fe_do) # thanks to https://stackoverflow.com/questions/43733271/how-to-switch-programmatically-between-do-and-dopar-in-foreach
-  output_list =foreach::foreach(i=f0:f1,  .packages = packages2passon,
-                                .export=functions2passon, .errorhandling=errhand) %myinfix% { # the process can take easily 1 minute per file, so probably there is a time gain by doing it parallel
-                                  tryCatchResult = tryCatch({
-                                    # for (i in f0:f1) {
+  # `%myinfix%` = ifelse(do.parallel, fe_dopar, fe_do) # thanks to https://stackoverflow.com/questions/43733271/how-to-switch-programmatically-between-do-and-dopar-in-foreach
+  # output_list =foreach::foreach(i=f0:f1,  .packages = packages2passon,
+  #                               .export=functions2passon, .errorhandling=errhand) %myinfix% { # the process can take easily 1 minute per file, so probably there is a time gain by doing it parallel
+  #                                 tryCatchResult = tryCatch({
+                                    for (i in f0:f1) {
                                     if (length(ffdone) > 0) {
                                       if (length(which(ffdone == fnames.ms3[i])) > 0) {
                                         skip = 1 #skip this file because it was analysed before")
@@ -352,6 +367,8 @@ g.part5 = function(datadir=c(),metadatadir=c(),f0=c(),f1=c(),strategy=1,maxdur=0
                                                 nightsi = which(sec == 0 & min == (dayborder-floor(dayborder))*60 & hour == floor(dayborder)) #shift the definition of midnight if required
                                               }
                                               Nts = nrow(ts)
+                                            } else {
+                                              ts$time_num = as.numeric(iso8601chartime2POSIX(ts$time,tz=desiredtz))
                                             }
                                             #===============================================
                                             # GENERATE SIB report
@@ -710,6 +727,149 @@ g.part5 = function(datadir=c(),metadatadir=c(),f0=c(),f1=c(),strategy=1,maxdur=0
                                                           NANS = which(is.nan(dsummary[di,]) == TRUE) #average of no values will results in NaN
                                                           if (length(NANS) > 0) dsummary[di,NANS] = ""
                                                           #===============================================
+                                                          # LIDS analysis
+                                                          #=======================================================
+                                                          if (do.LIDS == TRUE) {
+                                                            if (timewindowi == "WW") { # only do these analyses when timewindow is defined as WW
+                                                              # Extract level and acc for the night
+                                                              accnight = ts$ACC[sse][which(ts$diur[sse] == 1)] # select acceleration from the night
+                                                              levelsnight = LEVELS[sse][which(ts$diur[sse] == 1)] # select acceleration from the night
+
+                                                              # first distinguish wakefullness from sleep using the classifications from GGIR::g.part3:
+                                                              WakeBinary = ifelse(test=levelsnight==0,yes = 0,no = 1) #sleep = 0, wake = 1
+                                                              sleepbouts = matrix(0,2,2)
+                                                              if (length(which(WakeBinary == 1)) > 0) {
+                                                                sleepbouts = g.detect.sleepbout(WakeBinary=WakeBinary, WakeBout.threshold=0.5,
+                                                                                                WakeBoutMin= WakeBoutMin, SleepBoutMin=SleepBoutMin, ws3=ws3new)
+                                                              }
+                                                              # 2. Apply LIDS analysis per bout
+                                                              if (length(which(sleepbouts[,1] != 0)) > 0) {
+                                                                # TO DO: This currently only considers the first sleep bout, implement loop to analyse all sleep bouts?
+                                                                sleepboutnr = 1
+                                                                
+                                                                sleepboutlength = (sleepbouts[sleepboutnr,2] - sleepbouts[sleepboutnr,1]) / (60/ws3new) # in minutes
+                                                                time_boutstart_hr = hour[sse][which(ts$diur[sse] == 1)][sleepbouts[sleepboutnr,1]]
+                                                                time_boutstart_min = min[sse][which(ts$diur[sse] == 1)][sleepbouts[sleepboutnr,1]]
+                                                                time_boutstart_sec = sec[sse][which(ts$diur[sse] == 1)][sleepbouts[sleepboutnr,1]]
+                                                                
+                                                                time_sleepboutstart_char = paste0(time_boutstart_hr,":",time_boutstart_min,":",time_boutstart_sec)
+                                                                if (time_boutstart_hr < 24) time_boutstart_hr = time_boutstart_hr + 24
+                                                                time_sleepboutstart_num = time_boutstart_hr + time_boutstart_min/60 + time_boutstart_sec/(3600)
+                                                                
+                                                                accnight = accnight[sleepbouts[sleepboutnr,1]:sleepbouts[sleepboutnr,2]]
+                                                                # #------------------------------
+                                                                # # TO DO: Remove next lines
+                                                                # x11()
+                                                                # par(mfrow=c(2,2),pch=20)
+                                                                # plot(LEVELS[sse][which(diur[sse] == 1)],main="LEVELS")
+                                                                # plot(diur[sse][which(diur[sse] == 1)],main="diur")
+                                                                # plot(WakeBinary,main="bin")
+                                                                # plot(ACC[sse][which(diur[sse] == 1)],main="ACC",type="l")
+                                                                # timelinebout = sleepbouts[1,1]:sleepbouts[1,2]
+                                                                # boutline = rep(200,diff(sleepbouts[1,])+1)
+                                                                # lines(timelinebout,boutline,type="l",col="red")
+                                                                # #-----------------------------------------
+                                                                
+                                                                #analyse twice using two different LIDS signals
+                                                                #1) LIDS using a binary distinction movement/non-movement above a threshold
+                                                                #2) LIDS using ENMO minus a threshold
+                                                                LIDSan = g.LIDS.analyse(acc=accnight,ws3=ws3new,fit.criterion.cosfit=fit.criterion.cosfit,
+                                                                                        LIDS_cosfit_periods = LIDS_cosfit_periods, nonstationary = nonstationary,
+                                                                                        LIDSmetric=1)
+                                                                LIDSan_ENMOsub = g.LIDS.analyse(acc=accnight,ws3=ws3new,fit.criterion.cosfit=fit.criterion.cosfit,
+                                                                                                LIDS_cosfit_periods = LIDS_cosfit_periods, nonstationary = nonstationary,
+                                                                                                LIDSmetric=2)
+                                                                
+                                                                if (length(LIDSan) > 0) { # only report LIDS if LIDS analyses were successful
+                                                                  LIDS_S = LIDSan$LIDS_S
+                                                                  vars_nontimecourse <- c("period","DC","RoO","phase", "cor", "pvalue", "MRI", "lm_intercept", "lm_slope", "lm_MeanAmplitude")
+                                                                  
+                                                                  #add ENMOsub info
+                                                                  #these lines can be removed later when not needed anymore
+                                                                  if(length(LIDSan_ENMOsub) > 0) {
+                                                                    
+                                                                    LIDS_S_ENMOsub = LIDSan_ENMOsub$LIDS_S
+                                                                    names(LIDS_S_ENMOsub) = paste(names(LIDS_S_ENMOsub),"ENMOsub", sep="_")
+                                                                    LIDS_S = merge(LIDS_S, LIDS_S_ENMOsub, by.x="time_min", by.y="time_min_ENMOsub", all=TRUE)
+                                                                    vars_nontimecourse = c(vars_nontimecourse, paste(vars_nontimecourse, "ENMOsub", sep="_"))
+                                                                  }
+                                                                  #For Vincent's non-stationary analysis
+                                                                  #deactivated for now for first trial run as not needed
+                                                                  # LIDS_NS = LIDSan$LIDS_NS
+                                                                  # fit.LIDS = lm(LIDS_NS$LIDSfitted ~ LIDS_NS$cycle_full)
+                                                                  # residuals = resid(fit.LIDS)
+                                                                  # MeanAmplitude = sd(residuals)
+                                                                  # maxperiod = max(LIDS_NS$period,na.rm = TRUE)
+                                                                  # maxcor = max(LIDS_NS$cor,na.rm = TRUE)
+                                                                  # maxMRI = max(LIDS_NS$MRI,na.rm = TRUE)
+                                                                  # medianperiod = median(LIDS_NS$period,na.rm = TRUE)
+                                                                  # mediancor = median(LIDS_NS$cor,na.rm = TRUE)
+                                                                  # medianMRI = median(LIDS_NS$MRI,na.rm = TRUE)
+                                                                  
+                                                                  #time_LIDS = LIDS_NS$time
+                                                                  # x11()
+                                                                  # par(mfrow=c(2,2),mar=c(4,4,4,1))
+                                                                  # plot(time_LIDS, LIDS_NS$LIDSraw, type="l",main="LIDS",col="black",ylab="LIDS score",xlab="time (minutes)",bty="l")
+                                                                  # lines(time_LIDS, LIDS_NS$LIDSfitted + LIDS_NS$DC,type="l",col="blue",ylab="LIDS raw")
+                                                                  # legend("bottomright",legend = c("LIDS raw","LIDS fitted"),col=c("black","blue"),lty = c(1,1),cex=0.8)
+                                                                  # plot(LIDS_NS$cycle_interpol, LIDS_NS$LIDSfitted_abs_norm_interpol,type="l",main="LIDS",ylab="LIDS score",xlab="cycle",bty="l",col="blue")
+                                                                  # legend("bottomright",legend = c("LIDS raw"),col=c("blue"),lty = c(1,1),cex=0.8)
+                                                                  # plot(time_LIDS,LIDS_NS$period,type="l",main="LIDS period",ylab = "period length (minutes)",xlab="time (minutes)",bty="l")
+                                                                  # plot(LIDS_NS$cycle_interpol,LIDS_NS$LIDSperiod_interpol,type="l",main="LIDS period",ylab = "period length (minutes)",xlab="cycle",bty="l")
+                                                                  # #------------------------------
+                                                                  LIDS_S_nsummary = LIDS_S[1,vars_nontimecourse]
+                                                                  LIDS_S_nsummary = cbind(LIDS_S_nsummary, cycles = max(LIDS_S$cycle, na.rm = TRUE))
+                                                                  LIDS_S_nsummary = cbind(LIDS_S_nsummary, cycles_ENMOsub = max(LIDS_S$cycle_ENMOsub, na.rm = TRUE))
+                                                                  
+                                                                  #Add LIDS to summary
+                                                                  LIDSvariables = as.vector(c(data.frame(wakeduraftersleep = sleepbouts[1,3],
+                                                                                                         sleepboutlength = sleepboutlength,
+                                                                                                         time_sleepboutstart_char = as.character(time_sleepboutstart_char),
+                                                                                                         time_sleepboutstart_num = time_sleepboutstart_num, stringsAsFactors = FALSE),
+                                                                                              LIDS_S_nsummary)) #4 sleep + 11 binary + 11 ENMOsub variables = 26 variables
+                                                                  # Comment Vincent: Although LIDS_S_nsummary is a nice object with value names, I am converting into a character vector
+                                                                  # because that is what dsummary expects.
+                                                                  dsummary[di,fi:(fi+25)] = as.character(LIDSvariables)
+                                                                  #Store LIDS time series
+                                                                  #as R dataframe
+                                                                  save(LIDS_S,file=paste(metadatadir,LIDSfolder,"/file_",fnames.ms3[i],"_night_",wi,"_bout_",sleepboutnr,".csv",sep=""))
+                                                                  #as csv
+                                                                  if (LIDS2csv == TRUE) {
+                                                                    LIDSoutputfilename = paste(metadatadir,LIDSfolder,"/file_",fnames.ms3[i],"_night_",wi,"_bout_",sleepboutnr,".csv",sep="")
+                                                                    write.csv(LIDS_S,
+                                                                              file = LIDSoutputfilename, row.names = FALSE)
+                                                                  }
+                                                                } else {
+                                                                  # LIDS skipped because analyses not successful
+                                                                  dsummary[di,fi:(fi+25)] = rep("",26)
+                                                                }
+                                                              } else {
+                                                                # LIDS skipped because no sleep bouts found
+                                                                dsummary[di,fi:(fi+25)] = rep("",26)
+                                                              }
+                                                            } else {
+                                                              # LIDS skipped because these are the MM (midnight to midnight analysis)
+                                                              dsummary[di,fi:(fi+25)] = rep("",26)
+                                                            }
+                                                            ds_names[fi:(fi+25)] = c("LIDS_wakeboutlength_min","LIDS_sleepboutlength_min",
+                                                                                     "LIDS_sleepboutstart_char", "LIDS_sleepboutstart_num",
+                                                                                     
+                                                                                     "LIDS_cos_period_min", "LIDS_cos_DC",
+                                                                                     "LIDS_cos_rangeofoscillation", "LIDS_cos_phaseconstant_deg",
+                                                                                     "LIDS_cos_corrCoeff", "LIDS_cos_corrPvalue",
+                                                                                     "LIDS_cos_MunichRhythmicityIndex",
+                                                                                     "LIDS_lm_intercept", "LIDS_lm_slope", "LIDS_lm_meanamplitude",
+                                                                                     
+                                                                                     "LIDS_cos_period_min_ENMOsub", "LIDS_cos_DC_ENMOsub",
+                                                                                     "LIDS_cos_rangeofoscillation_ENMOsub", "LIDS_cos_phaseconstant_deg_ENMOsub",
+                                                                                     "LIDS_cos_corrCoeff_ENMOsub", "LIDS_cos_corrPvalue_ENMOsub",
+                                                                                     "LIDS_cos_MunichRhythmicityIndex_ENMOsub",
+                                                                                     "LIDS_lm_intercept_ENMOsub", "LIDS_lm_slope_ENMOsub", "LIDS_lm_meanamplitude_ENMOsub",
+                                                                                     "LIDS_cos_totalcycles",
+                                                                                     "LIDS_cos_totalcycles_ENMOsub")
+                                                            fi = fi + 26
+                                                          }
+                                                          #===============================================
                                                           # NUMBER OF BOUTS
                                                           checkshape = function(boutcount) {
                                                             if (is.matrix(boutcount) == FALSE) {# if there is only one bout setting
@@ -921,10 +1081,10 @@ g.part5 = function(datadir=c(),metadatadir=c(),f0=c(),f1=c(),strategy=1,maxdur=0
                                         rm(output,dsummary)
                                       }
                                     }
-                                    # } # For the for loop
-                                  }) # END tryCatch
-                                  return(tryCatchResult)
-                                }
+                                    } # For the for loop
+                                #   }) # END tryCatch
+                                #   return(tryCatchResult)
+                                # }
   if (do.parallel == TRUE) {
     on.exit(parallel::stopCluster(cl))
   }

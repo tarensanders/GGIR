@@ -390,6 +390,16 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
 
   }
   if (length(which(ls() == "do.sibreport")) == 0) do.sibreport = FALSE
+  
+  
+  # LIDS related
+  if (exists("do.LIDS") == FALSE) do.LIDS = FALSE
+  if (exists("LIDS2csv") == FALSE) LIDS2csv = FALSE
+  if (exists("LIDS_cosfit_periods") == FALSE) LIDS_cosfit_periods = seq(30,180,by=5)
+  if (exists("fit.criterion.cosfit") == FALSE) fit.criterion.cosfit = 2
+  if (exists("WakeBoutMin") == FALSE) WakeBoutMin = 30
+  if (exists("SleepBoutMin") == FALSE) SleepBoutMin = 180
+  
   # VISUAL REPORT
 
   if (exists("viewingwindow") == FALSE)  viewingwindow = 1
@@ -552,7 +562,10 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
             LUXthresholds=LUXthresholds, maxNcores=maxNcores,
             LUX_cal_constant=LUX_cal_constant, LUX_cal_exponent=LUX_cal_exponent,
             LUX_day_segments=LUX_day_segments, do.sibreport=do.sibreport,
-            sleeplogidnum=sleeplogidnum)
+            sleeplogidnum=sleeplogidnum,
+            do.LIDS = do.LIDS, LIDS2csv = LIDS2csv, LIDS_cosfit_periods = LIDS_cosfit_periods,
+            fit.criterion.cosfit=fit.criterion.cosfit,  WakeBoutMin = WakeBoutMin,
+            SleepBoutMin=SleepBoutMin)
   }
   #--------------------------------------------------
   # Store configuration parameters in config file
