@@ -209,7 +209,7 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
   # PART 2
   if (exists("strategy") == FALSE)  strategy = 1
   if (exists("maxdur") == FALSE)  maxdur = 0
-  
+
   if (exists("hrs.del.start") == FALSE)  hrs.del.start = 0
   if (strategy != 1 & hrs.del.start != 0) {
     warning("\nSetting argument hrs.del.start in combination with strategy = ", strategy," is not meaningful, because this is only used when straytegy = 1")
@@ -252,14 +252,14 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
   if (exists("qM5L5") == FALSE)  qM5L5 = c()
   if (exists("MX.ig.min.dur") == FALSE)  MX.ig.min.dur = 10
   if (exists("qwindow_dateformat") == FALSE)  qwindow_dateformat = "%d-%m-%Y"
-  
+
 
   # PART 3
   if (exists("anglethreshold") == FALSE)  anglethreshold = 5
   if (exists("timethreshold") == FALSE)  timethreshold = 5
   if (exists("constrain2range") == FALSE) constrain2range = TRUE
   if (exists("do.part3.pdf") == FALSE) do.part3.pdf = TRUE
-  if (exists("def.noc.sleep") == FALSE)  def.noc.sleep=1
+  if (exists("def.noc.sleep") == FALSE)  def.noc.sleep = 1
   if (exists("HASPT.algo") == FALSE & length(def.noc.sleep) != 2) {
     HASPT.algo = "HDCZA"
   } else if (length(def.noc.sleep) == 2) {
@@ -313,14 +313,14 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
   if (exists("relyonsleeplog") == FALSE)  relyonsleeplog=c()
   if (exists("relyonsleeplog") == TRUE & exists("relyonguider") == FALSE)  relyonguider=relyonsleeplog
   if (exists("sleeplogidnum") == FALSE)  sleeplogidnum=TRUE
-  
+
   if (exists("do.visual") == FALSE)  do.visual=FALSE
   if (exists("data_cleaning_file") == FALSE) data_cleaning_file = c()
   if (exists("excludefirst.part4") == FALSE) excludefirst.part4 = FALSE
   if (exists("excludelast.part4") == FALSE)  excludelast.part4 = FALSE
   if (exists("sleeplogsep") == FALSE)  sleeplogsep = ","
   if (exists("sleepwindowType") == FALSE)  sleepwindowType = "SPT"
-  if (HASPT.algo == "HorAngle") {
+  if (HASPT.algo == "HorAngle" & sleepwindowType != "TimeInBed") {
     warning("\nHASPT.algo is set to HorAngle, therefor auto-updating sleepwindowType to TimeInBed")
     sleepwindowType = "TimeInBed"
   }
@@ -350,6 +350,10 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
   if (exists("minimum_MM_length.part5") == FALSE) minimum_MM_length.part5 = 23
   if (exists("frag.metrics") == FALSE) frag.metrics = c()
   if (exists("part5_agg2_60seconds") == FALSE) part5_agg2_60seconds = FALSE
+  # Nap detection:
+  if (exists("nap_model") == FALSE) nap_model = c()
+  if (exists("possible_nap_window") == FALSE) possible_nap_window = c(9, 18)
+  if (exists("possible_nap_dur") == FALSE) possible_nap_dur = c(15, 240)
   # Related to (r)ead (m)yacc (c)sv file:
   if (exists("rmc.dec") == FALSE) rmc.dec="."
   if (exists("rmc.firstrow.acc") == FALSE) rmc.firstrow.acc = c()
@@ -390,16 +394,16 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
 
   }
   if (length(which(ls() == "do.sibreport")) == 0) do.sibreport = FALSE
-  
-  
+
+
   # LIDS related
   if (exists("do.LIDS") == FALSE) do.LIDS = FALSE
   if (exists("LIDS2csv") == FALSE) LIDS2csv = FALSE
-  if (exists("LIDS_cosfit_periods") == FALSE) LIDS_cosfit_periods = seq(30,180,by=5)
+  if (exists("LIDS_cosfit_periods") == FALSE) LIDS_cosfit_periods = seq(30,180, by = 5)
   if (exists("fit.criterion.cosfit") == FALSE) fit.criterion.cosfit = 2
   if (exists("WakeBoutMin") == FALSE) WakeBoutMin = 30
   if (exists("SleepBoutMin") == FALSE) SleepBoutMin = 180
-  
+
   # VISUAL REPORT
 
   if (exists("viewingwindow") == FALSE)  viewingwindow = 1
@@ -409,9 +413,9 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
 
   GGIRversion = ""
   SI = sessionInfo()
-  try(expr = {GGIRversion = SI$loadedOnly$GGIR$Version},silent=TRUE)
+  try(expr = {GGIRversion = SI$loadedOnly$GGIR$Version}, silent = TRUE)
   if (length(GGIRversion) == 0) {
-    try(expr = {GGIRversion = SI$otherPkgs$GGIR$Version},silent=TRUE)
+    try(expr = {GGIRversion = SI$otherPkgs$GGIR$Version}, silent = TRUE)
   }
   if (length(GGIRversion) == 0) GGIRversion = "could not extract version"
   GGIRversion = paste0(" ",GGIRversion)
@@ -429,7 +433,7 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
   cat("\n     (5) How GGIR was used: Share the config.csv file or your R script.")
   cat("\n     (6) How you post-processed / cleaned GGIR output")
   cat("\n     (7) How reported outcomes relate to the specific variable names in GGIR")
-  
+
   if (dopart1 == TRUE) {
     cat('\n')
     cat(paste0(rep('_',options()$width),collapse=''))
@@ -563,6 +567,9 @@ g.shell.GGIR = function(mode = 1:5, datadir = c(), outputdir = c(), studyname = 
             LUX_cal_constant=LUX_cal_constant, LUX_cal_exponent=LUX_cal_exponent,
             LUX_day_segments=LUX_day_segments, do.sibreport=do.sibreport,
             sleeplogidnum=sleeplogidnum,
+            possible_nap_window = possible_nap_window,
+            possible_nap_dur = possible_nap_dur,
+            nap_model = nap_model, HASIB.algo = HASIB.algo,
             do.LIDS = do.LIDS, LIDS2csv = LIDS2csv, LIDS_cosfit_periods = LIDS_cosfit_periods,
             fit.criterion.cosfit=fit.criterion.cosfit,  WakeBoutMin = WakeBoutMin,
             SleepBoutMin=SleepBoutMin)

@@ -27,10 +27,12 @@ g.part5(datadir=c(), metadatadir=c(), f0=c(), f1=c(), strategy=1,
   LUXthresholds = c(0, 500, 1000, 5000, 10000, 20000),
   LUX_cal_constant = c(), LUX_cal_exponent = c(),
   LUX_day_segments = c(), do.sibreport=FALSE, sleeplogidnum=FALSE,
-   do.LIDS = FALSE, LIDS2csv = FALSE, 
-        LIDS_cosfit_periods = seq(30,180,by=5),
-        fit.criterion.cosfit = 2,  nonstationary = FALSE,
-        WakeBoutMin = 30, SleepBoutMin = 180)
+  possible_nap_window = c(9, 18), possible_nap_dur = c(15, 240),
+  nap_model = "hip3yr", HASIB.algo ="vanHees2015",
+  do.LIDS = FALSE, LIDS2csv = FALSE,
+       LIDS_cosfit_periods = seq(30,180,by=5),
+       fit.criterion.cosfit = 2,  nonstationary = FALSE,
+       WakeBoutMin = 30, SleepBoutMin = 180)
 }
 \arguments{
   \item{datadir}{
@@ -226,6 +228,18 @@ g.part5(datadir=c(), metadatadir=c(), f0=c(), f1=c(), strategy=1,
   \item{sleeplogidnum}{
     See \link{g.part4}
   }
+  \item{possible_nap_window}{
+    See \link{g.part5.classifyNaps}
+  }
+  \item{possible_nap_dur}{
+    See \link{g.part5.classifyNaps}
+  }
+  \item{nap_model}{
+    See \link{g.part5.classifyNaps}
+  }
+   \item{HASIB.algo}{
+    See \link{g.part3}.
+  }
   \item{do.LIDS}{
    boolean, whether to do LIDS analysis (default: FALSE).
   }
@@ -247,7 +261,7 @@ g.part5(datadir=c(), metadatadir=c(), f0=c(), f1=c(), strategy=1,
   }
   \item{SleepBoutMin}{
    Mininum duration of a Sleep Bout (minutes)
-  }
+   }
 }
 \value{
   The function does not produce values but generates an RData file
