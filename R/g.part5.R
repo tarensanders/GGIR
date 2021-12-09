@@ -70,7 +70,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
   fnames.ms5 = sort(dir(paste(metadatadir, "/meta/ms5.out", sep = "")))
   # path results folder
   results = paste(metadatadir,"/results",sep="")
-  
+
   # create folder for LIDS output if it does not exist yet
   LIDSfolder = "/meta/LIDS"
   if (do.LIDS == TRUE) {
@@ -81,7 +81,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
       }
     }
   }
-  
+
   # path to sleeplog milestonedata, if it exists:
   sleeplogRDA = paste(metadatadir, "/meta/sleeplog.RData", sep = "")
   if (file.exists(sleeplogRDA) == TRUE) {
@@ -381,10 +381,10 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                } else {
                                                  IDtmp = as.character(ID)
                                                }
-                                               
+
                                                sibreport = g.sibreport(ts, ID = IDtmp, epochlength = ws3new, logs_diaries,
                                                                        desiredtz = desiredtz)
-                                               
+
                                                # store in csv file:
                                                ms5.sibreport = "/meta/ms5.outraw/sib.reports"
                                                if (!file.exists(paste(metadatadir, ms5.sibreport, sep = ""))) {
@@ -399,8 +399,8 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                                    possible_nap_dur = possible_nap_dur,
                                                                                    nap_model = nap_model,
                                                                                    HASIB.algo = HASIB.algo)
-                                               
-                                               
+
+
                                                # store in ts object, such that it is exported in as time series
                                                ts$nap1_nonwear2 = 0
                                                # napsindices = which(naps_nonwear$probability_nap == 1)
@@ -441,7 +441,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                  }
                                                }
                                              }
-                                             
+
                                              ts$window = 0
                                              for (TRLi in threshold.lig) {
                                                for (TRMi in threshold.mod) {
@@ -787,7 +787,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                # Extract level and acc for the night
                                                                accnight = ts$ACC[sse][which(ts$diur[sse] == 1)] # select acceleration from the night
                                                                levelsnight = LEVELS[sse][which(ts$diur[sse] == 1)] # select acceleration from the night
-                                                               
+
                                                                # first distinguish wakefullness from sleep using the classifications from GGIR::g.part3:
                                                                WakeBinary = ifelse(test=levelsnight==0,yes = 0,no = 1) #sleep = 0, wake = 1
                                                                sleepbouts = matrix(0,2,2)
@@ -799,16 +799,16 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                if (length(which(sleepbouts[,1] != 0)) > 0) {
                                                                  # TO DO: This currently only considers the first sleep bout, implement loop to analyse all sleep bouts?
                                                                  sleepboutnr = 1
-                                                                 
+
                                                                  sleepboutlength = (sleepbouts[sleepboutnr,2] - sleepbouts[sleepboutnr,1]) / (60/ws3new) # in minutes
                                                                  time_boutstart_hr = hour[sse][which(ts$diur[sse] == 1)][sleepbouts[sleepboutnr,1]]
                                                                  time_boutstart_min = min[sse][which(ts$diur[sse] == 1)][sleepbouts[sleepboutnr,1]]
                                                                  time_boutstart_sec = sec[sse][which(ts$diur[sse] == 1)][sleepbouts[sleepboutnr,1]]
-                                                                 
+
                                                                  time_sleepboutstart_char = paste0(time_boutstart_hr,":",time_boutstart_min,":",time_boutstart_sec)
                                                                  if (time_boutstart_hr < 24) time_boutstart_hr = time_boutstart_hr + 24
                                                                  time_sleepboutstart_num = time_boutstart_hr + time_boutstart_min/60 + time_boutstart_sec/(3600)
-                                                                 
+
                                                                  accnight = accnight[sleepbouts[sleepboutnr,1]:sleepbouts[sleepboutnr,2]]
                                                                  # #------------------------------
                                                                  # # TO DO: Remove next lines
@@ -822,7 +822,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                  # boutline = rep(200,diff(sleepbouts[1,])+1)
                                                                  # lines(timelinebout,boutline,type="l",col="red")
                                                                  # #-----------------------------------------
-                                                                 
+
                                                                  #analyse twice using two different LIDS signals
                                                                  #1) LIDS using a binary distinction movement/non-movement above a threshold
                                                                  #2) LIDS using ENMO minus a threshold
@@ -832,15 +832,15 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                  LIDSan_ENMOsub = g.LIDS.analyse(acc=accnight,ws3=ws3new,fit.criterion.cosfit=fit.criterion.cosfit,
                                                                                                  LIDS_cosfit_periods = LIDS_cosfit_periods, nonstationary = nonstationary,
                                                                                                  LIDSmetric=2)
-                                                                 
+
                                                                  if (length(LIDSan) > 0) { # only report LIDS if LIDS analyses were successful
                                                                    LIDS_S = LIDSan$LIDS_S
                                                                    vars_nontimecourse <- c("period","DC","RoO","phase", "cor", "pvalue", "MRI", "lm_intercept", "lm_slope", "lm_MeanAmplitude")
-                                                                   
+
                                                                    #add ENMOsub info
                                                                    #these lines can be removed later when not needed anymore
                                                                    if(length(LIDSan_ENMOsub) > 0) {
-                                                                     
+
                                                                      LIDS_S_ENMOsub = LIDSan_ENMOsub$LIDS_S
                                                                      names(LIDS_S_ENMOsub) = paste(names(LIDS_S_ENMOsub),"ENMOsub", sep="_")
                                                                      LIDS_S = merge(LIDS_S, LIDS_S_ENMOsub, by.x="time_min", by.y="time_min_ENMOsub", all=TRUE)
@@ -858,7 +858,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                    # medianperiod = median(LIDS_NS$period,na.rm = TRUE)
                                                                    # mediancor = median(LIDS_NS$cor,na.rm = TRUE)
                                                                    # medianMRI = median(LIDS_NS$MRI,na.rm = TRUE)
-                                                                   
+
                                                                    #time_LIDS = LIDS_NS$time
                                                                    # x11()
                                                                    # par(mfrow=c(2,2),mar=c(4,4,4,1))
@@ -873,7 +873,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                                    LIDS_S_nsummary = LIDS_S[1,vars_nontimecourse]
                                                                    LIDS_S_nsummary = cbind(LIDS_S_nsummary, cycles = max(LIDS_S$cycle, na.rm = TRUE))
                                                                    LIDS_S_nsummary = cbind(LIDS_S_nsummary, cycles_ENMOsub = max(LIDS_S$cycle_ENMOsub, na.rm = TRUE))
-                                                                   
+
                                                                    #Add LIDS to summary
                                                                    LIDSvariables = as.vector(c(data.frame(wakeduraftersleep = sleepbouts[1,3],
                                                                                                           sleepboutlength = sleepboutlength,
@@ -906,13 +906,13 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                              }
                                                              ds_names[fi:(fi+25)] = c("LIDS_wakeboutlength_min","LIDS_sleepboutlength_min",
                                                                                       "LIDS_sleepboutstart_char", "LIDS_sleepboutstart_num",
-                                                                                      
+
                                                                                       "LIDS_cos_period_min", "LIDS_cos_DC",
                                                                                       "LIDS_cos_rangeofoscillation", "LIDS_cos_phaseconstant_deg",
                                                                                       "LIDS_cos_corrCoeff", "LIDS_cos_corrPvalue",
                                                                                       "LIDS_cos_MunichRhythmicityIndex",
                                                                                       "LIDS_lm_intercept", "LIDS_lm_slope", "LIDS_lm_meanamplitude",
-                                                                                      
+
                                                                                       "LIDS_cos_period_min_ENMOsub", "LIDS_cos_DC_ENMOsub",
                                                                                       "LIDS_cos_rangeofoscillation_ENMOsub", "LIDS_cos_phaseconstant_deg_ENMOsub",
                                                                                       "LIDS_cos_corrCoeff_ENMOsub", "LIDS_cos_corrPvalue_ENMOsub",
@@ -1126,7 +1126,7 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                              emptycols = emptycols[which(emptycols %in% FRAG_variables_indices == FALSE)]
                                              if (length(emptycols) > 0) output = output[-emptycols]
                                            }
-                                           
+
                                            if (length(output) > 0) {
                                              if (nrow(output) > 0) {
                                                save(output, file = paste(metadatadir,
