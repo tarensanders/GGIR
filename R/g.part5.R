@@ -366,7 +366,8 @@ g.part5 = function(datadir = c(), metadatadir = c(), f0=c(), f1=c(), strategy = 
                                                }
                                                Nts = nrow(ts)
                                              } else {
-                                               ts$time_num = as.numeric(iso8601chartime2POSIX(ts$time,tz=desiredtz))
+                                               ts$time = iso8601chartime2POSIX(ts$time, tz = desiredtz)
+                                               ts$time_num = as.numeric(ts$time,tz = desiredtz)
                                              }
                                              if ("angle" %in% colnames(ts)) {
                                                ts = ts[, -which(colnames(ts) == "angle")]
