@@ -86,7 +86,8 @@ g.LIDS.analyse = function(acc = c(), ws3 = 5, fit.criterion.cosfit = 2,
   #   LIDS conversion + 30-min filtering
   #   30min = 1800s = 360*5s
   LIDS_unfiltered = 100 / (ActivityScore_smooth + 1)
-  #when using the ActivityScore at 5sec resolution + 10min rollsum, values are scaled sensibly for the following transformation
+  #when using the ActivityScore at 5sec resolution + 10min rollsum, values are 
+  # scaled sensibly for the following transformation
   LIDS = zoo::rollapply(data=LIDS_unfiltered,width=(60*30)/ws3, FUN=function(x) mean(x,na.rm=T), partial=T)
   
   #   Step4:
