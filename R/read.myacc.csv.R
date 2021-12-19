@@ -233,11 +233,6 @@ read.myacc.csv = function(rmc.file=c(), rmc.nrow=c(), rmc.skip=c(), rmc.dec=".",
     rawTime = vector(mode = "numeric", nrow(P))
     rawTime = as.numeric(as.POSIXlt(P$timestamp,tz = rmc.desiredtz))
     rawAccel = as.matrix(P[,-c(which(colnames(P)=="timestamp"))])
-    if(ncol(rawAccel) == 4){ # there is temperature data
-       if(any(is.na(rawAccel[,4]))) { # there are NA gaps because of different sampling frequency
-         rawAccel[,4] = zoo::na.locf(rawAccel[,4])  # fill NA gaps with the last observation available
-       }
-    } 
     step = 1/sf
     start = rawTime[1]
     end = rawTime[length(rawTime)]
