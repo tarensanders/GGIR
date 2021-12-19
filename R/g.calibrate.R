@@ -249,7 +249,7 @@ g.calibrate = function(datafile, spherecrit=0.3,minloadcrit=72,printsummary=TRUE
           if (mon == 2 | (mon == 4 & dformat == 4) | (mon == 0 & use.temp == TRUE)) {
             if (mon == 2) {
               temperaturecolumn = 7
-            } else if (mon ==4 | mon == 5) {
+            } else if (mon ==4 | mon == 5 | mon == 0) {
               temperaturecolumn = 5
             }
             temperature = as.numeric(data[,temperaturecolumn])
