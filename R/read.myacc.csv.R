@@ -242,12 +242,12 @@ read.myacc.csv = function(rmc.file=c(), rmc.nrow=c(), rmc.skip=c(), rmc.dec=".",
     accelRes = matrix(0,nrow = nr, ncol = ncol(rawAccel), dimnames = list(NULL,colnames(rawAccel)))
     rawLast = nrow(rawAccel)
     accelRes = resample(rawAccel, rawTime, timeRes, rawLast, interpolationType) # this is now the resampled acceleration data
-    if(all(is.nan(accelRes[1,]))) accelRes = accelRes[-1,]
     colnamesP = colnames(P)
     timeRes = as.POSIXlt(timeRes, origin=rmc.origin, tz = rmc.desiredtz)
     P = as.data.frame(accelRes, stringsAsFactors = TRUE)
     P$timestamp = timeRes
     P = P[,c(ncol(P),1:(ncol(P)-1))]
+    if(all(is.nan(accelRes[1,]))) accelRes = accelRes[-1,]
     colnames(P) = colnamesP
   }
   return(list(data=P,header=header))
