@@ -1,25 +1,18 @@
-g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocation, startt, I, LC2, LD, dcomplscore,
+g.analyse.perfile = function(ID, fname, deviceSerialNumber, BodyLocation, startt, I, LC2, LD, dcomplscore,
                              LMp, LWp, C, lookat, AveAccAve24hr, colnames_to_lookat, QUAN, ML5AD,
                              ML5AD_names, igfullr, igfullr_names,
                              daysummary, ds_names, includedaycrit, strategy, hrs.del.start,
                              hrs.del.end, maxdur, windowsizes, idloc, snloc, wdayname, doquan,
                              qlevels_names, doiglevels, tooshort, InterdailyStability, IntradailyVariability,
-                             IVIS_windowsize_minutes, IVIS_epochsize_seconds, qwindow, longitudinal_axis_id) {
+                             IVIS_windowsize_minutes, qwindow, longitudinal_axis_id) {
   filesummary = matrix(" ",1,100) #matrix to be stored with summary per participant
   s_names = rep(" ",ncol(filesummary))
   vi = 1
   # Person identification number
-  if (idloc == 2) {
-    filesummary[vi] = unlist(strsplit(fname,"_"))[1] #id
-  } else if (idloc == 4) {
-    filesummary[vi] = IDd
-  } else if (idloc == 1) {
-    filesummary[vi] = ID
-  } else if (idloc == 3) {
-    filesummary[vi] = ID2
-  } else if (idloc == 5) {
-    filesummary[vi] = unlist(strsplit(fname," "))[1] #id
-  }
+  filesummary[vi] = ID
+  # Identify which of the metrics are in g-units to aid deciding whether to multiply by 1000
+  g_variables_lookat = lookat[grep(x = colnames_to_lookat, pattern = "BrondCounts|ZCX|ZCY", invert = TRUE)]
+
   # Serial number
   if (snloc == 1) {
     filesummary[(vi+1)] = deviceSerialNumber
@@ -58,7 +51,7 @@ g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocati
   filesummary[vi] = C$cal.error.end
   filesummary[vi+1] = C$QCmessage
   for (la in 1:length(lookat)) {
-    AveAccAve24hr[la] = 	AveAccAve24hr[la] * 1000
+    AveAccAve24hr[la] = 	AveAccAve24hr[la] * ifelse(test = lookat[la] %in% g_variables_lookat, yes = 1000, no = 1)
   }
   q0 = length(AveAccAve24hr) + 1
   filesummary[(vi+2):(vi+q0)] = AveAccAve24hr
@@ -69,7 +62,7 @@ g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocati
   #quantile, ML5, and intensity gradient variables
   if (doquan == TRUE) {
     q1 = length(QUAN)
-    filesummary[vi:((vi-1)+q1)] = QUAN*1000
+    filesummary[vi:((vi-1)+q1)] = QUAN * ifelse(test = lookat[la] %in% g_variables_lookat, yes = 1000, no = 1)
     s_names[vi:((vi-1)+q1)] = paste0(qlevels_names,"_fullRecording")
     vi = vi + q1
     q1 = length(ML5AD)
@@ -111,12 +104,11 @@ g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocati
                                IVIS_windowsize_minutes)
     iNA = which(is.na(filesummary[vi:(vi+3)]) == TRUE)
     if (length(iNA) > 0) filesummary[(vi:(vi+3))[iNA]] = " "
-    s_names[vi:(vi+2)] = c("IS_interdailystability","IV_intradailyvariability",
-                           "IVIS_windowsize_minutes")
+    s_names[vi:(vi+2)] = c("IS_interdailystability", "IV_intradailyvariability", "IVIS_windowsize_minutes")
     vi = vi + 4
     # Variables per metric - summarise with stratification to weekdays and weekend days
     daytoweekvar = c(5:length(ds_names))
-    md = unique(which(ds_names[daytoweekvar] %in% c("measurementday", "weekday") == TRUE), grep(x = ds_names, pattern="qwindow_timestamps|qwindow_names"))
+    md = which(ds_names[daytoweekvar] %in% c("measurementday", "weekday", "qwindow_timestamps", "qwindow_names"))
     if (length(md) > 0) daytoweekvar = daytoweekvar[-md]
 
     dtwtel = 0
@@ -214,9 +206,10 @@ g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocati
   }
   rm(LD); rm(ID)
   # tidy up daysummary object
-  mw = which(is.na(daysummary)==T)
+  mw = which(is.na(daysummary) == T)
+  mw = c(mw, grep(pattern = "NaN", x = daysummary))
   if (length(mw) > 0) {
-    daysummary[which(is.na(daysummary)==T)] = " "
+    daysummary[mw] = " "
   }
   cut = which(ds_names == " " | ds_names == "" | is.na(ds_names)==T)
   if (length(cut > 0)) {
@@ -236,11 +229,12 @@ g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocati
     daysummary = daysummary[,-columnswith16am[2:length(columnswith16am)]]
   }
   # tidy up filesummary object
-  mw = which(is.na(filesummary)==T)
+  mw = which(is.na(filesummary) == T)
+  mw = c(mw, grep(pattern = "NaN", x = filesummary))
   if (length(mw) > 0) {
-    filesummary[which(is.na(filesummary)==T)] = " "
+    filesummary[mw] = " "
   }
-  cut = which(as.character(s_names) == " " | as.character(s_names) == "" | is.na(s_names)==T |
+  cut = which(as.character(s_names) == " " | as.character(s_names) == "" | is.na(s_names)==T | duplicated(s_names) |
                 s_names %in% c("AD_", "WE_", "WD_", "WWD_", "WWE_",
                                "AD_N hours", "WE_N hours", "WD_N hours", "WWD_N hours", "WWE_N hours",
                                "AD_N valid hours", "WE_N valid hours", "WD_N valid hours", "WWD_N valid hours", "WWE_N valid hours"))
@@ -248,23 +242,27 @@ g.analyse.perfile = function(ID, ID2, IDd, fname, deviceSerialNumber, BodyLocati
     s_names = s_names[-cut]
     filesummary = filesummary[-cut]
   }
-  filesummary = data.frame(value=t(filesummary),stringsAsFactors=FALSE) #needs to be t() because it will be a column otherwise
+  filesummary = data.frame(value = t(filesummary), stringsAsFactors = FALSE) #needs to be t() because it will be a column otherwise
   names(filesummary) = s_names
   
   columns2order = c()
   if (ncol(filesummary) > 37) {
-    columns2order = 30:(ncol(filesummary)-6)
+    columns2order = grep(pattern = "AD_|WE_|WD_|WWD_|WWE_", x = names(filesummary))
   }
   options(encoding = "UTF-8")
   if (length(columns2order) > 0) {
-    selectcolumns = c(names(filesummary)[1:29],
-                      sort(names(filesummary[,columns2order])),
-                      names(filesummary)[(ncol(filesummary)-5):ncol(filesummary)])
+    selectcolumns = c(names(filesummary)[1:(columns2order[1] - 1)],
+                      grep(pattern = "^AD_", x = names(filesummary), value = T),
+                      grep(pattern = "^WD_", x = names(filesummary), value = T),
+                      grep(pattern = "^WE_", x = names(filesummary), value = T),
+                      grep(pattern = "^WWD_", x = names(filesummary), value = T),
+                      grep(pattern = "^WWE_", x = names(filesummary), value = T),
+                      names(filesummary)[(columns2order[length(columns2order)] + 1):ncol(filesummary)])
   } else {
     selectcolumns = names(filesummary)
   }
   selectcolumns = selectcolumns[which(selectcolumns %in% colnames(filesummary) == TRUE)]
   filesummary = filesummary[,selectcolumns]
   filesummary = filesummary[,!duplicated(filesummary)]
-  invisible(list(filesummary=filesummary, daysummary=daysummary))
+  invisible(list(filesummary = filesummary, daysummary = daysummary))
 }
